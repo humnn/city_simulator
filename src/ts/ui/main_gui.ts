@@ -18,7 +18,7 @@ import {DefaultStyle, RoughStyle} from './style';
 import CanvasWrapper from './canvas_wrapper';
 import Buildings, {BuildingModel} from './buildings';
 import PolygonUtil from '../impl/polygon_util';
-
+import * as seedrandom from "seedrandom";
 /**
  * Handles Map folder, glues together impl
  */
@@ -26,6 +26,9 @@ export default class MainGUI {
     private numBigParks: number = 2;
     private numSmallParks: number = 0;
     private clusterBigParks: boolean = false;
+    private seedParams = {
+        seed: "city1"
+    };
 
     private domainController = DomainController.getInstance();
     private intersections: Vector[] = [];
@@ -61,10 +64,18 @@ export default class MainGUI {
     private redraw: boolean = true;
 
     constructor(private guiFolder: dat.GUI, private tensorField: TensorField, private closeTensorFolder: () => void) {
+        this.setSeed(this.seedParams.seed);
         guiFolder.add(this, 'generateEverything');
         // guiFolder.add(this, 'simpleBenchMark');
         const animateController = guiFolder.add(this, 'animate');
         guiFolder.add(this, 'animationSpeed');
+        const seedController = guiFolder.add(this.seedParams, "seed")
+            .name("Seed");
+
+        seedController.onFinishChange((v: string) => {
+            this.setSeed(v);
+            this.generateEverything();
+        });
         const radiusController = guiFolder.add(this.minorParams, 'cityRadius', 50, 5000)
             .step(50)
             .name('City Radius');
@@ -205,7 +216,10 @@ export default class MainGUI {
             this.addParks();
         });
     }
-
+    setSeed(seed: string) {
+        const rng = seedrandom(seed);
+        Math.random = rng as () => number;
+    }
     addParks(): void {
         const g = new Graph(this.majorRoads.allStreamlines
             .concat(this.mainRoads.allStreamlines)
@@ -256,6 +270,7 @@ export default class MainGUI {
     }
 
     async generateEverything() {
+        this.setSeed(this.seedParams.seed);
         await this.coastline.generateRoads();
         await this.mainRoads.generateRoads();
         await this.majorRoads.generateRoads(this.animate);
