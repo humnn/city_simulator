@@ -55,6 +55,7 @@ export default class MainGUI {
         seedTries: 300,
         simplifyTolerance: 0.5,
         collideEarly: 0,
+        cityRadius: 200,
     };
 
     private redraw: boolean = true;
@@ -64,7 +65,26 @@ export default class MainGUI {
         // guiFolder.add(this, 'simpleBenchMark');
         const animateController = guiFolder.add(this, 'animate');
         guiFolder.add(this, 'animationSpeed');
+        const radiusController = guiFolder.add(this.minorParams, 'cityRadius', 50, 5000)
+            .step(50)
+            .name('City Radius');
 
+        radiusController.onChange((v: number) => {
+            this.mainParams.cityRadius = v;
+            this.majorParams.cityRadius = v;
+            this.coastlineParams.cityRadius = v;
+
+            this.mainRoads.clearStreamlines();
+            this.majorRoads.clearStreamlines();
+            this.minorRoads.clearStreamlines();
+
+            this.bigParks = [];
+            this.smallParks = [];
+
+            this.buildings.reset();
+
+            this.redraw = true;
+        });
         this.coastlineParams = Object.assign({
             coastNoise: {
                 noiseEnabled: true,
@@ -236,7 +256,7 @@ export default class MainGUI {
     }
 
     async generateEverything() {
-        this.coastline.generateRoads();
+        await this.coastline.generateRoads();
         await this.mainRoads.generateRoads();
         await this.majorRoads.generateRoads(this.animate);
         await this.minorRoads.generateRoads(this.animate);

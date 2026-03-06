@@ -25,6 +25,7 @@ export interface StreamlineParams {
     seedTries: number;  // Max failed seeds
     simplifyTolerance: number;
     collideEarly: number;  // Chance of early collision 0-1
+    cityRadius: number;
 }
 
 /**
@@ -56,7 +57,7 @@ export default class StreamlineGenerator {
     public streamlinesMajor: Vector[][] = [];
     public streamlinesMinor: Vector[][] = [];
     public allStreamlinesSimple: Vector[][] = [];  // Reduced vertex count
-
+    protected cityCenter: Vector;
     /**
      * Uses world-space coordinates
      */
@@ -78,7 +79,9 @@ export default class StreamlineGenerator {
 
         this.majorGrid = new GridStorage(this.worldDimensions, this.origin, params.dsep);
         this.minorGrid = new GridStorage(this.worldDimensions, this.origin, params.dsep);
-
+        this.cityCenter = this.origin.clone().add(
+            new Vector(this.worldDimensions.x/2, this.worldDimensions.y/2)
+        );
         this.setParamsSq();
     }
 
@@ -296,11 +299,14 @@ export default class StreamlineGenerator {
     }
 
     protected samplePoint(): Vector {
-        // TODO better seeding scheme
-        return new Vector(
-            Math.random() * this.worldDimensions.x,
-            Math.random() * this.worldDimensions.y)
-            .add(this.origin);
+
+        const r = Math.sqrt(Math.random()) * this.params.cityRadius;
+        const theta = Math.random() * Math.PI * 2;
+
+        const x = this.cityCenter.x + r * Math.cos(theta);
+        const y = this.cityCenter.y + r * Math.sin(theta);
+
+        return new Vector(x, y);
     }
  
     /**
