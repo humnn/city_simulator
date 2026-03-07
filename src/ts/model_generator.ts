@@ -17,7 +17,9 @@ enum ModelGeneratorStates {
 
 export default class ModelGenerator {
     private readonly groundLevel = 20;  // Thickness of groundMesh
-
+    private staticMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(0.001, 0.001, 0.001)
+    );
     private readonly exportSTL = require('threejs-export-stl');
     private resolve: (blob: any) => void = b => {};
     private zip: any;
@@ -173,10 +175,11 @@ export default class ModelGenerator {
     /**
      * Extrude a polygon into a THREE.js mesh
      */
+    
     private polygonToMesh(polygon: Vector[], height: number): THREE.Mesh {
-        if (polygon.length < 3) {
-            log.error("Tried to export empty polygon as OBJ");
-            return null;
+        if (!polygon || polygon.length < 3) {
+            log.warn("Invalid polygon, using placeholder mesh");
+            return this.staticMesh;
         }
         const shape = new THREE.Shape();
         shape.moveTo(polygon[0].x, polygon[0].y);

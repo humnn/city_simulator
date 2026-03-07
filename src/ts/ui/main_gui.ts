@@ -34,9 +34,15 @@ export default class MainGUI {
     private intersections: Vector[] = [];
     private bigParks: Vector[][] = [];
     private smallParks: Vector[][] = [];
-    private animate: boolean = true;
+    private animate: boolean = false;
     private animationSpeed: number = 30;
+    private autoExpandParams = {
+        enabled: false,
+        step: 100,
+        targetRadius: 2000
+    };
 
+    private autoGenerating = false;
     private coastline: WaterGUI;
     private mainRoads: RoadGUI;
     private majorRoads: RoadGUI;
@@ -63,7 +69,7 @@ export default class MainGUI {
 
     private redraw: boolean = true;
 
-    constructor(private guiFolder: dat.GUI, private tensorField: TensorField, private closeTensorFolder: () => void) {
+    constructor(private guiFolder: dat.GUI, private tensorField: TensorField, private closeTensorFolder: () => void, private exportSVG: () => void) {
         this.setSeed(this.seedParams.seed);
         guiFolder.add(this, 'generateEverything');
         // guiFolder.add(this, 'simpleBenchMark');
@@ -96,6 +102,13 @@ export default class MainGUI {
 
             this.redraw = true;
         });
+        const autoFolder = guiFolder.addFolder("Auto City Growth");
+
+        autoFolder.add(this.autoExpandParams, "enabled").name("Auto Generate");
+        autoFolder.add(this.autoExpandParams, "step", 10, 500).step(10).name("Radius Step");
+        autoFolder.add(this.autoExpandParams, "targetRadius", 100, 10000).step(50).name("Target Radius");
+
+        autoFolder.add({Start: () => this.startAutoGeneration()}, "Start");
         this.coastlineParams = Object.assign({
             coastNoise: {
                 noiseEnabled: true,
@@ -176,7 +189,7 @@ export default class MainGUI {
             tensorField.sea = [];
             tensorField.river = [];
         });
-
+        
         this.mainRoads.setPreGenerateCallback(() => {
             this.majorRoads.clearStreamlines();
             this.minorRoads.clearStreamlines();
@@ -268,15 +281,54 @@ export default class MainGUI {
         this.tensorField.parks.push(...this.bigParks);
         this.tensorField.parks.push(...this.smallParks);
     }
+    private async startAutoGeneration() {
 
+        if (this.autoGenerating) return;
+
+        this.autoGenerating = true;
+
+        while (
+            this.autoExpandParams.enabled &&
+            this.minorParams.cityRadius < this.autoExpandParams.targetRadius
+        ) {
+
+            log.info("Generating city with radius:", this.minorParams.cityRadius);
+
+            await this.generateEverything();
+
+            // EXPORT SVG HERE
+            this.exportSVG();
+
+            // increase radius
+            this.minorParams.cityRadius += this.autoExpandParams.step;
+            this.mainParams.cityRadius = this.minorParams.cityRadius;
+            this.majorParams.cityRadius = this.minorParams.cityRadius;
+            this.coastlineParams.cityRadius = this.minorParams.cityRadius;
+
+            this.mainRoads.clearStreamlines();
+            this.majorRoads.clearStreamlines();
+            this.minorRoads.clearStreamlines();
+
+            this.bigParks = [];
+            this.smallParks = [];
+            this.buildings.reset();
+
+            this.redraw = true;
+
+            await new Promise(r => setTimeout(r, 100));
+        }
+
+        this.autoGenerating = false;
+    }
     async generateEverything() {
         this.setSeed(this.seedParams.seed);
-        await this.coastline.generateRoads();
+        //await this.coastline.generateRoads();
         await this.mainRoads.generateRoads();
         await this.majorRoads.generateRoads(this.animate);
         await this.minorRoads.generateRoads(this.animate);
         this.redraw = true;
         await this.buildings.generate(this.animate);
+        
     }
 
     update() {

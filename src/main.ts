@@ -110,7 +110,12 @@ class Main {
         };
 
         this.tensorField = new TensorFieldGUI(this.tensorFolder, this.dragController, true, noiseParamsPlaceholder);
-        this.mainGui = new MainGUI(this.roadsFolder, this.tensorField, () => this.tensorFolder.close());
+        this.mainGui = new MainGUI(
+            this.roadsFolder,
+            this.tensorField,
+            () => this.tensorFolder.close(),
+            () => this.downloadSVG()
+        );
 
         this.optionsFolder.add(this.tensorField, 'drawCentre');
         this.optionsFolder.add(this, 'highDPI').onChange((high: boolean) => this.changeCanvasScale(high));

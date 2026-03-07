@@ -159,6 +159,7 @@ export default class Buildings {
         this.redraw();
         this._models = new BuildingModels(this.polygonFinder.polygons);
 
+        console.log("Total buildings created:", this._models.buildingModels.length);
         this.postGenerateCallback();
     }
 
