@@ -85,7 +85,7 @@ export default class DomainController {
      * Screen origin in world space
      */
     get origin(): Vector {
-        return this._origin.clone();
+        return Vector.zeroVector();
     }
 
     get zoom(): number {
@@ -100,7 +100,7 @@ export default class DomainController {
      * @return {Vector} world-space w/h visible on screen
      */
     get worldDimensions(): Vector {
-        return this.screenDimensions.divideScalar(this._zoom);
+        return this.screenDimensions.divideScalar(0.2);
     }
 
     set screenDimensions(v: Vector) {
@@ -111,9 +111,9 @@ export default class DomainController {
     set zoom(z: number) {
         if (z >= 0.001 && z <= 20) {
             this.moved = true;
-            const oldWorldSpaceMidpoint = this.origin.add(this.worldDimensions.divideScalar(2));
+            const oldWorldSpaceMidpoint = this.origin.add(this.screenDimensions.divideScalar(this._zoom).divideScalar(2));
             this._zoom = z;
-            const newWorldSpaceMidpoint = this.origin.add(this.worldDimensions.divideScalar(2));
+            const newWorldSpaceMidpoint = this.origin.add(this.screenDimensions.divideScalar(this._zoom).divideScalar(2));
             this.pan(newWorldSpaceMidpoint.sub(oldWorldSpaceMidpoint));
             this.zoomCallback();
         }

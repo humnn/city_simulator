@@ -79,7 +79,7 @@ export default class StreamlineGenerator {
 
         this.majorGrid = new GridStorage(this.worldDimensions, this.origin, params.dsep);
         this.minorGrid = new GridStorage(this.worldDimensions, this.origin, params.dsep);
-        this.cityCenter = new Vector(0, 0);
+        this.cityCenter = new Vector(this.worldDimensions.x / 2, this.worldDimensions.y / 2);
         this.setParamsSq();
     }
 
