@@ -114,7 +114,7 @@ class Main {
             this.roadsFolder,
             this.tensorField,
             () => this.tensorFolder.close(),
-            () => this.downloadSVG()
+            () => this.downloadPng()
         );
 
         this.optionsFolder.add(this.tensorField, 'drawCentre');
