@@ -216,19 +216,43 @@ export class DefaultStyle extends Style {
                 for (const b of this.lots) canvas.drawPolygon(b);
             }
 
-            // Pseudo-3D
-            if (this.colourScheme.buildingModels && (!this.colourScheme.zoomBuildings || this.domainController.zoom >= 2.5)) {
-                canvas.setFillStyle(this.colourScheme.buildingSideColour);
-                canvas.setStrokeStyle(this.colourScheme.buildingSideColour);
 
-                // This is a cheap approximation that often creates visual artefacts
-                // Draws building sides, then rooves instead of properly clipping polygons etc.
+            // Pseudo-3D with Depth Sorting
+            if (this.colourScheme.buildingModels && (!this.colourScheme.zoomBuildings || this.domainController.zoom >= 2.5)) {
+                const camera = this.domainController.getCameraPosition();
+
+                // collect all sides
+                const allSides: {poly: Vector[], dist: number}[] = [];
+
                 for (const b of this.buildingModels) {
-                    for (const s of b.sides) canvas.drawPolygon(s);
+                    for (const s of b.sides) {
+
+                        const center = s[0].clone().add(s[1]).divideScalar(2);
+                        const dist = center.distanceToSquared(camera);
+
+                        allSides.push({ poly: s, dist });
+                    }
                 }
+
+                // sort far → near
+                allSides.sort((a, b) => b.dist - a.dist);
+
+                // draw sides
+                canvas.setFillStyle(this.colourScheme.buildingSideColour);
+                canvas.setStrokeStyle(this.colourScheme.buildingStroke);
+                canvas.setLineWidth(0.5);
+
+                for (const s of allSides) {
+                    canvas.drawPolygon(s.poly);
+                }
+
+                // draw roofs after sides
                 canvas.setFillStyle(this.colourScheme.buildingColour);
                 canvas.setStrokeStyle(this.colourScheme.buildingStroke);
-                for (const b of this.buildingModels) canvas.drawPolygon(b.roof);
+
+                for (const b of this.buildingModels) {
+                    canvas.drawPolygon(b.roof);
+                }                
             }
         }
 
@@ -346,36 +370,47 @@ export class RoughStyle extends Style {
                 for (const b of this.lots) canvas.drawPolygon(b);
             }
 
-            // Pseudo-3D
+            // Update the Pseudo-3D section in RoughStyle.draw:
+
             if (this.colourScheme.buildingModels && (!this.colourScheme.zoomBuildings || this.domainController.zoom >= 2.5)) {
-                // Pseudo-3D
-                canvas.setOptions({
-                    roughness: 1.2,
-                    stroke: this.colourScheme.buildingStroke,
-                    strokeWidth: 1,
-                    fill: this.colourScheme.buildingSideColour,
-                });
+                // Replace your existing sort logic with this:
 
-                // TODO this can be hugely improved
-                const allSidesDistances: any[] = [];
+
                 const camera = this.domainController.getCameraPosition();
-                for (const b of this.buildingModels) {
+
+                const sortedBuildings = this.buildingModels
+                    .map(b => {
+                        const center = PolygonUtil.averagePoint(b.roof);
+                        const dist = center.distanceToSquared(camera);
+                        return { b, dist };
+                    })
+                    .sort((a, b) => b.dist - a.dist)
+                    .map(o => o.b);
+
+                for (const b of sortedBuildings) {
+
+                    canvas.setOptions({
+                        roughness: 1.2,
+                        stroke: this.colourScheme.buildingStroke,
+                        strokeWidth: 1,
+                        fill: this.colourScheme.buildingSideColour,
+                        fillStyle: 'solid'
+                    });
+
                     for (const s of b.sides) {
-                        const averagePoint = s[0].clone().add(s[1]).divideScalar(2);
-                        allSidesDistances.push([averagePoint.distanceToSquared(camera), s]);
+                        canvas.drawPolygon(s);
                     }
+
+                    canvas.setOptions({
+                        roughness: 1.2,
+                        stroke: this.colourScheme.buildingStroke,
+                        strokeWidth: 1,
+                        fill: this.colourScheme.buildingColour,
+                        fillStyle: 'solid'
+                    });
+
+                    canvas.drawPolygon(b.roof);
                 }
-                allSidesDistances.sort((a, b) => b[0] - a[0]);
-                for (const p of allSidesDistances) canvas.drawPolygon(p[1]);
-
-                canvas.setOptions({
-                    roughness: 1.2,
-                    stroke: this.colourScheme.buildingStroke,
-                    strokeWidth: 1,
-                    fill: this.colourScheme.buildingColour,
-                });
-
-                for (const b of this.buildingModels) canvas.drawPolygon(b.roof);
             }
         }
     }
