@@ -65,6 +65,7 @@ class Main {
     private cameraXController: dat.GUIController;
     private cameraYController: dat.GUIController;
     private cameraFolder: dat.GUI;
+    private cameraFileInput: HTMLInputElement;
     constructor() {
         // GUI Setup
         const zoomController = this.gui.add(this.domainController, 'zoom');
@@ -83,10 +84,7 @@ class Main {
         this.cameraBuffer.x = centerX;
         this.cameraBuffer.y = centerY;
 
-        this.cameraXController = this.cameraFolder.add(this.cameraBuffer, "x").name("Camera X");
-        this.cameraYController = this.cameraFolder.add(this.cameraBuffer, "y").name("Camera Y");
-
-        this.cameraFolder.add(this.cameraSubmit, "apply").name("Apply Camera");
+        
 
         this.gui.add(this, 'generate');
         this.cameraFolder = this.gui.addFolder("Camera");
@@ -96,6 +94,20 @@ class Main {
         this.optionsFolder = this.gui.addFolder('Options');
         this.downloadsFolder = this.gui.addFolder('Download');
 
+        this.cameraXController = this.cameraFolder.add(this.cameraBuffer, "x").name("Camera X");
+        this.cameraYController = this.cameraFolder.add(this.cameraBuffer, "y").name("Camera Y");
+
+        this.cameraFolder.add(this.cameraSubmit, "apply").name("Apply Camera");
+        this.cameraFolder.add(this, "saveCamera").name("Save Camera");
+        this.cameraFolder.add(this, "loadCamera").name("Load Camera");
+        this.cameraFileInput = document.createElement("input");
+        this.cameraFileInput.type = "file";
+        this.cameraFileInput.accept = ".json";
+
+        this.cameraFileInput.onchange = (e: any) => {
+            const file = e.target.files[0];
+            if (file) this.handleCameraFile(file);
+        };
         // Canvas setup
         this.canvas = document.getElementById(Util.CANVAS_ID) as HTMLCanvasElement;
         this.tensorCanvas = new DefaultCanvasWrapper(this.canvas);
@@ -164,6 +176,54 @@ class Main {
     /**
      * Generate an entire map with no control over the process
      */
+    saveCamera(): void {
+
+        const zoom = this.domainController.zoom;
+        const origin = (this.domainController as any)._origin;
+
+        const screen = this.domainController.screenDimensions;
+
+        const centerX = origin.x + (screen.x / zoom) / 2;
+        const centerY = origin.y + (screen.y / zoom) / 2;
+
+        const data = {
+            zoom: zoom,
+            cameraX: centerX,
+            cameraY: centerY
+        };
+
+        const blob = new Blob(
+            [JSON.stringify(data, null, 2)],
+            { type: "application/json" }
+        );
+
+        saveAs(blob, "camera.json");
+    }
+    loadCamera(): void {
+
+        this.cameraFileInput.click();
+    }
+    private handleCameraFile(file: File): void {
+
+        const reader = new FileReader();
+
+        reader.onload = () => {
+
+            const data = JSON.parse(reader.result as string);
+
+            this.cameraBuffer.x = data.cameraX;
+            this.cameraBuffer.y = data.cameraY;
+
+            this.domainController.zoom = data.zoom;
+
+            this.applyCameraBuffer();
+
+            this.cameraXController.updateDisplay();
+            this.cameraYController.updateDisplay();
+        };
+
+        reader.readAsText(file);
+    }
     applyCameraBuffer(): void {
 
         const zoom = this.domainController.zoom;
