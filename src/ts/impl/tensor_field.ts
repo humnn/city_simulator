@@ -73,7 +73,57 @@ export default class TensorField {
         this.sea = [];
         this.river = [];
     }
+    exportToJSON() {
+        return {
+            noiseParams: this.noiseParams,
+            fields: this.basisFields.map((field: any) => {
 
+                const base: any = {
+                    type: field.constructor.name.toLowerCase(),
+                    centre: {
+                        x: field._centre.x,
+                        y: field._centre.y
+                    },
+                    size: field._size,
+                    decay: field._decay
+                };
+
+                if (field._theta !== undefined) {
+                    base.theta = field._theta;
+                }
+
+                return base;
+            })
+        };
+    }
+    importFromJSON(data: any) {
+
+        this.reset();
+
+        Object.assign(this.noiseParams, data.noiseParams);
+
+        for (const f of data.fields) {
+
+            const centre = new Vector(f.centre.x, f.centre.y);
+
+            if (f.type === "grid") {
+                this.addGrid(
+                    centre,
+                    f.size ?? 1000,
+                    f.decay ?? 10,
+                    f.theta ?? 0
+                );
+            }
+
+            if (f.type === "radial") {
+                this.addRadial(
+                    centre,
+                    f.size ?? 1000,
+                    f.decay ?? 10
+                );
+            }
+        }
+    }
     getCentrePoints(): Vector[] {
         return this.basisFields.map(field => field.centre);
     }

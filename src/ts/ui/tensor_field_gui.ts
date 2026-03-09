@@ -25,6 +25,8 @@ export default class TensorFieldGUI extends TensorField {
             setRecommended: (): void => this.setRecommended(),
             addRadial: (): void => this.addRadialRandom(),
             addGrid: (): void => this.addGridRandom(),
+            save: (): void => this.saveTensor(),
+            load: (): void => this.loadTensor()
         };
 
         this.guiFolder.add(tensorFieldGuiObj, 'reset');
@@ -32,6 +34,8 @@ export default class TensorFieldGUI extends TensorField {
         this.guiFolder.add(tensorFieldGuiObj, 'setRecommended');
         this.guiFolder.add(tensorFieldGuiObj, 'addRadial');
         this.guiFolder.add(tensorFieldGuiObj, 'addGrid');
+        this.guiFolder.add(tensorFieldGuiObj, 'save').name("Save Tensor");
+        this.guiFolder.add(tensorFieldGuiObj, 'load').name("Load Tensor");
     }
 
     /**
@@ -60,7 +64,47 @@ export default class TensorFieldGUI extends TensorField {
     addGridRandom(): void {
         this.addGridAtLocation(this.randomLocation());
     }
+    private saveTensor(): void {
 
+        const data = this.exportToJSON();
+
+        const blob = new Blob(
+            [JSON.stringify(data, null, 2)],
+            { type: "application/json" }
+        );
+
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "tensor_field.json";
+        a.click();
+
+        URL.revokeObjectURL(url);
+    }
+    private loadTensor(): void {
+
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = ".json";
+
+        input.onchange = (e: any) => {
+
+            const file = e.target.files[0];
+            const reader = new FileReader();
+
+            reader.onload = (event: any) => {
+
+                const data = JSON.parse(event.target.result);
+
+                this.importFromJSON(data);
+            };
+
+            reader.readAsText(file);
+        };
+
+        input.click();
+    }
     private addGridAtLocation(location: Vector): void {
         const width = this.domainController.worldDimensions.x;
         this.addGrid(location,
