@@ -54,12 +54,42 @@ class Main {
     private firstGenerate = true;  // Don't randomise tensor field on first generate
     private modelGenerator: ModelGenerator;
 
+    private camera = {
+        x: 0,
+        y: 0
+    };
+    private cameraBuffer = {
+        x: 0,
+        y: 0
+    };
+    private cameraXController: dat.GUIController;
+    private cameraYController: dat.GUIController;
+    private cameraFolder: dat.GUI;
     constructor() {
         // GUI Setup
         const zoomController = this.gui.add(this.domainController, 'zoom');
         this.domainController.setZoomUpdate(() => zoomController.updateDisplay());
-        this.gui.add(this, 'generate');
+        const origin = (this.domainController as any)._origin;
 
+        const zoom = this.domainController.zoom;
+        const screen = this.domainController.screenDimensions;
+
+        const centerX = origin.x + (screen.x / zoom) / 2;
+        const centerY = origin.y + (screen.y / zoom) / 2;
+
+        this.camera.x = centerX;
+        this.camera.y = centerY;
+
+        this.cameraBuffer.x = centerX;
+        this.cameraBuffer.y = centerY;
+
+        this.cameraXController = this.cameraFolder.add(this.cameraBuffer, "x").name("Camera X");
+        this.cameraYController = this.cameraFolder.add(this.cameraBuffer, "y").name("Camera Y");
+
+        this.cameraFolder.add(this.cameraSubmit, "apply").name("Apply Camera");
+
+        this.gui.add(this, 'generate');
+        this.cameraFolder = this.gui.addFolder("Camera");
         this.tensorFolder = this.gui.addFolder('Tensor Field');
         this.roadsFolder = this.gui.addFolder('Map');
         this.styleFolder = this.gui.addFolder('Style');
@@ -134,6 +164,23 @@ class Main {
     /**
      * Generate an entire map with no control over the process
      */
+    applyCameraBuffer(): void {
+
+        const zoom = this.domainController.zoom;
+        const screen = this.domainController.screenDimensions;
+
+        const newOrigin = new Vector(
+            this.cameraBuffer.x - (screen.x / zoom) / 2,
+            this.cameraBuffer.y - (screen.y / zoom) / 2
+        );
+
+        (this.domainController as any)._origin = newOrigin;
+        this.domainController.moved = true;
+    }
+    private cameraSubmit = {
+        apply: () => this.applyCameraBuffer()
+    };
+
     generate(): void {
         if (!this.firstGenerate) {
             this.tensorField.setRecommended();
@@ -306,7 +353,6 @@ class Main {
             }
         }
     }
-
     update(): void {
         if (this.modelGenerator) {
             let continueUpdate = true;
@@ -318,6 +364,30 @@ class Main {
 
         this._style.update();
         this.mainGui.update();
+        const origin = (this.domainController as any)._origin;
+        const zoom = this.domainController.zoom;
+        const screen = this.domainController.screenDimensions;
+
+        const centerX = origin.x + (screen.x / zoom) / 2;
+        const centerY = origin.y + (screen.y / zoom) / 2;
+
+        if (centerX !== this.camera.x || centerY !== this.camera.y) {
+
+            this.camera.x = centerX;
+            this.camera.y = centerY;
+
+            const active = document.activeElement;
+
+            if (active !== this.cameraXController.domElement.querySelector('input')) {
+                this.cameraBuffer.x = centerX;
+                this.cameraXController.updateDisplay();
+            }
+
+            if (active !== this.cameraYController.domElement.querySelector('input')) {
+                this.cameraBuffer.y = centerY;
+                this.cameraYController.updateDisplay();
+            }
+        }
         this.draw();
         requestAnimationFrame(this.update.bind(this));
     }
